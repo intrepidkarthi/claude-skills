@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "write-like-me",
+  "version": "4.0.0",
+  "description": "Audit, rewrite, or generate content to strip AI writing patterns and match the author's voice. Modes: detect / rewrite / edit-in-place / generate. Voice profiles include a baked-in 'karthik' profile.",
+  "author": {
+    "name": "Karthikeyan NG",
+    "email": "intrepidkarthi@gmail.com"
+  },
+  "homepage": "https://github.com/intrepidkarthi/claude-skills",
+  "repository": "https://github.com/intrepidkarthi/claude-skills",
+  "license": "MIT",
+  "keywords": ["writing", "editing", "voice", "ai-detection", "humanizer"]
+}

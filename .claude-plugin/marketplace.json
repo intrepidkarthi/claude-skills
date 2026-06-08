@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "intrepidkarthi-skills",
+  "version": "1.0.0",
+  "description": "Karthik's personal Claude Code skills. Starts with write-like-me (strip AI-isms; write/rewrite in Karthik's voice).",
+  "owner": {
+    "name": "Karthikeyan NG",
+    "email": "intrepidkarthi@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "write-like-me",
+      "source": "./plugins/write-like-me",
+      "version": "4.0.0",
+      "category": "writing",
+      "description": "Audit, rewrite, or generate content to strip AI writing patterns ('AI-isms') and match the author's voice. Triggers on 'remove AI-isms', 'clean up AI writing', 'write this like me', 'draft a post in my voice', or writing/rewriting a tweet, thread, or LinkedIn post."
+    }
+  ]
+}
