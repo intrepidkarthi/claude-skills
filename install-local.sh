@@ -40,8 +40,10 @@ fi
 
 install_to() { # $1 = a .../.claude/skills directory
   mkdir -p "$1/$SKILL_NAME"
-  cp "$SRC_DIR/SKILL.md" "$1/$SKILL_NAME/SKILL.md"
-  echo "  installed: $1/$SKILL_NAME/SKILL.md"
+  # copy every file in the skill dir, not just SKILL.md — bundled resources
+  # (eval.md, references) are part of the skill and must travel with it.
+  cp "$SRC_DIR"/*.md "$1/$SKILL_NAME/"
+  echo "  installed: $1/$SKILL_NAME/ ($(ls "$SRC_DIR"/*.md | wc -l | tr -d ' ') files)"
 }
 
 echo "User scope (all projects on this machine):"

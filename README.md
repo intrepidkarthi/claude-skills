@@ -16,7 +16,8 @@ claude-skills/
 │       │   └── plugin.json             # plugin manifest
 │       └── skills/
 │           └── write-like-me/
-│               └── SKILL.md            # the skill itself
+│               ├── SKILL.md            # the skill itself
+│               └── eval.md             # self-check run before returning a draft
 ├── install-local.sh                    # local installer (user + per-project scope)
 └── README.md
 ```

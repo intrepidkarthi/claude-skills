@@ -11,7 +11,7 @@
     {
       "name": "write-like-me",
       "source": "./plugins/write-like-me",
-      "version": "4.0.0",
+      "version": "4.1.0",
       "category": "writing",
       "description": "Audit, rewrite, or generate content to strip AI writing patterns ('AI-isms') and match the author's voice. Triggers on 'remove AI-isms', 'clean up AI writing', 'write this like me', 'draft a post in my voice', or writing/rewriting a tweet, thread, or LinkedIn post."
     }

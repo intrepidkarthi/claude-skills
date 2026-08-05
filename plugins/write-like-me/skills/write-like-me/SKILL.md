@@ -1,7 +1,7 @@
 ---
 name: write-like-me
 description: Audit, rewrite, or generate content to strip AI writing patterns ("AI-isms") and match the author's voice. Use this skill when asked to "remove AI-isms," "clean up AI writing," "edit writing for AI patterns," "audit writing for AI tells," "make this sound less like AI," OR when asked to "write this like me," "draft a post in my voice," "make this sound like Karthik," or to write/rewrite a tweet, thread, LinkedIn post, or long-form piece in the author's own voice. Supports detect-only, edit-in-place, rewrite, and generate-from-scratch modes; an optional voice profile (karthik / casual / professional / technical / warm / blunt); and an iterate-to-convergence pass.
-version: 4.0.0
+version: 4.1.0
 license: MIT
 metadata:
   author: Karthikeyan NG
@@ -59,14 +59,41 @@ In **generate** mode, your job is to:
 
 In **detect** mode, your job is to:
 
-1. **Audit it**: identify every AI-ism present, citing the specific text
+1. **Audit it**: identify every AI-ism present, naming the pattern and quoting the specific line
 2. **Assess it**: note which flags are clear problems vs. patterns that may be intentional or effective in context
+3. **Offer**: end by offering to run the rewrite, so the writer chooses
+
+Three things detect mode must not do. **Don't score the draft** — no percentages, no "72% AI," no A-through-F grade. A number implies a measurement that doesn't exist here. **Don't render a verdict on authorship** — you are not a detector, and the false-positive research in the section above is the reason. **Don't rewrite** — flag and stop, even when the fix is obvious and you're confident it's an improvement.
+
+What detect mode produces instead is better than a score: a named pattern with a quoted line and a short fix. Detectors guess; a named pattern is evidence the writer can check for themselves and overrule if they disagree.
 
 In **edit** mode, your job is to:
 
 1. **Read** the file the writer named
 2. **Edit in place**: apply minimal, targeted fixes to the flagged spans with the Edit tool, leaving already-human passages untouched
 3. **Verify**: re-read the file and confirm the flagged patterns are resolved; report what you changed
+
+---
+
+## Editing principles (read before applying any rule below)
+
+The rule list in this file is long, and applying all of it at maximum strictness produces exactly the uniform, over-polished prose the skill exists to remove. These principles govern the rules. When a principle and a rule conflict, the principle wins. Adapted from `petergyang/no-ai-slop`.
+
+**Make the minimum effective edit.** Fix the AI patterns, the errors, and the genuinely unclear passages. Leave strong human sentences alone. A rough draft with a real voice should still sound like the same person afterward — rougher in places than you'd write it yourself. The amount of cutting should be proportional to the actual slop, not to how much you could tighten if you rewrote it from scratch.
+
+**Never invent.** Don't add claims, examples, statistics, quotes, dates, or opinions the writer didn't have. This is the hardest constraint to hold, because most rules here say "replace the vague thing with a specific one" — and the specific one has to come from the writer, not from you. If a sentence needs a number and there's no number in the draft, flag it and ask. Inventing a plausible figure to satisfy the "be concrete" rule is the worst failure mode this skill has.
+
+**Identify the voice before you touch anything.** Read the full draft first. Note the core point and three to five voice signals worth preserving: distinctive vocabulary, cadence, bluntness, humor, admitted uncertainty, digressions, level of polish. Keep this note internal — it's a working reference, not output. Then edit against it. If you can't identify the core point, ask rather than guessing.
+
+**Preserve edge and character.** Strong opinions, blunt language, humor, profanity, self-interruptions, honest admissions of being wrong — these belong to the writer. Don't launder them into safer, more professional wording. "This was a dumb call and I made it" should not become "In retrospect, the decision warranted more scrutiny."
+
+**Keep conditional words when they're doing work.** "I think," "maybe," "honestly," "to be honest" are on the cut lists above, and they should go when they're padding. They stay when they express real uncertainty, self-awareness, or the writer's spoken rhythm. The lists are defaults, not mandates.
+
+**Open it up, don't dumb it down.** Keep the substance, the nuance, and the precision. Strip only what makes the piece hard to read: jargon that has a plain equivalent, tangled sentence structure, abstract nouns standing in for concrete things. Simplifying the prose is the goal; simplifying the idea is not.
+
+**Don't flatten cadence in the name of clarity.** Split sentences that are genuinely hard to follow. Keep long spoken sentences, fragments, and abrupt pace changes when they're clear and characteristic. Uniformity is the thing being fixed, not the fix.
+
+**Preserve structure unless it's hurting the piece.** Keep the writer's progression and their detours. If you reorganize, say why in the "What changed" section — a silent restructure is the edit most likely to make a writer feel their piece was taken from them.
 
 ---
 
@@ -80,8 +107,12 @@ In **edit** mode, your job is to:
 - **Curly quotation marks (“ ” ‘ ’) and apostrophes**: Curly quotes and apostrophes (U+201C/U+201D, U+2018/U+2019) are a *weak* paste-from-chat signal — meaningful mainly in plain-text contexts like code comments, commit messages, or plaintext drafts, where nothing auto-curls. Treat as corroborating, never conclusive: Word, Google Docs, macOS, and iOS curl quotes by default, so most human prose contains them too. Don't flag curly apostrophes (U+2019) on their own. Replace with straight quotes in plain-text/code; leave them in finished publications and locale-correct punctuation (French « », German „ “).
 
 ### Sentence structure
-- **"It's not X — it's Y" / "This isn't about X, it's about Y"**: Rewrite as a direct positive statement. Max one per piece, and only if it serves the argument.
+- **"It's not X — it's Y" / "This isn't about X, it's about Y"**: Rewrite as a direct positive statement. Max one per piece, and only if it serves the argument. Two more shapes of the same move: **"It's not just X but Y"** (the concessive variant — smuggles the contrast past you) and **"The question isn't X, it's Y."** All three fix the same way: assert Y. "The question isn't the model, it's the eval" becomes "The eval matters more than the model."
+- **Negative listing**: The stacked-denial run-up — "Not a framework. Not a library. A protocol." / "This isn't a rebrand. It isn't a pivot. It's a rewrite." Three sentences of what something isn't, to make one claim about what it is. The negations carry no information; they exist to build cadence. Cut to the positive claim. If a contrast genuinely matters, name the *one* thing readers would wrongly assume and address it in the same sentence.
 - **Hollow intensifiers**: Cut `genuine`, `real` (as in "a real improvement"), `truly`, `quite frankly`, `to be honest`, `let's be clear`, `it's worth noting that`. Just state the fact.
+- **Often-empty adverbs**: `just`, `literally`, `simply`, `actually`, `honestly`, `truly`, `fundamentally`, `importantly`, `crucially`, `inherently`, `inevitably`. Unlike the hollow intensifiers above, these are conditional — cut them when they add nothing, keep them when they carry emphasis, contrast, real uncertainty, or the writer's spoken rhythm. "I just wanted to check" loses nothing without "just." "It literally doubled" is doing work if the number is surprising. Judge each instance; don't sweep the list.
+- **Nominalized verbs**: AI buries the verb in a noun and props it up with a weak carrier — `made a decision`, `has the ability to`, `provides support for`, `performs an analysis of`, `is reflective of`, `gives consideration to`. Unpack them: decided, can, supports, analyzes, reflects, considers. One verb beats a verb-plus-noun scaffold.
+- **Inanimate subject agency**: Watch for abstractions doing human verbs — "the decision emerged," "the strategy seeks to," "the data wants to tell us," "the architecture believes." Someone did the thing; name them. "The team shipped it Tuesday" beats "the deployment was realized." This is the active-voice rule with teeth: prefer a human subject, not just an active construction.
 - **Vague endorsement ("worth [verb]ing")**: Cut or replace `worth reading`, `worth paying attention to`, `worth a look`, `worth exploring`, `worth checking out`, `worth your time`. These substitute a generic thumbs-up for a specific reason. Say *why* something matters instead.
 - **Hedging**: Cut `perhaps`, `could potentially`, `it's important to note that`, `to be clear`. Make the point directly.
 - **Missing bridge sentences**: Each paragraph should connect to the last. If paragraphs could be rearranged without the reader noticing, add connective tissue.
@@ -156,6 +187,8 @@ Words are organized into three tiers based on how reliably they signal AI-genera
 | keen (as intensifier) | interested, eager, enthusiastic (or cut — just state the interest) |
 | symphony (metaphor) | (describe the actual coordination or combination) |
 | embrace (metaphor) | adopt, accept, use, switch to |
+| supercharge | speed up, boost (or cite how much faster) |
+| this is huge / this changes everything | (say what changed and for whom) |
 
 #### Tier 2 — Flag when 2+ appear in the same paragraph
 
@@ -249,7 +282,7 @@ These slot-fill constructions signal that a sentence was generated, not written.
 
 ### Transition phrases to remove or rewrite
 - "Moreover" / "Furthermore" / "Additionally" → restructure so the connection is obvious, or use "and," "also," "on top of that"
-- "In today's [X]" / "In an era where" → cut or state specific context
+- "In today's [X]" / "In an era where" / "In the age of [X]" / "In the world of [X]" → cut or state specific context
 - "It's worth noting that" / "Notably" → just state the fact
 - "Here's what's interesting" / "Here's what caught my eye" / "Here's what stood out" → reader-steering frames. Let the content signal its own importance. If you need a lead-in, make it specific: "The revenue number matters because..." not "Here's the interesting part."
 - "In conclusion" / "In summary" / "To summarize" → your conclusion should be obvious
@@ -306,12 +339,26 @@ These slot-fill constructions signal that a sentence was generated, not written.
 ### Filler phrases
 - Strip mechanical padding that adds words without meaning:
   - "It is important to note that" → (just state it)
-  - "In terms of" → (rewrite)
+  - "In terms of" / "With regard to" → (rewrite)
   - "The reality is that" → (cut or just state the claim)
+  - "Going forward" → (cut, or name the date/milestone)
 - Note: "In order to," "Due to the fact that," and "At the end of the day" are covered in the word/phrase table and transition sections above — don't duplicate rules.
 
 ### Generic conclusions
 - "The future looks bright," "Only time will tell," "One thing is certain," "As we move forward" — these are filler disguised as conclusions. Cut them. If the piece needs a closing thought, make it specific to the argument.
+
+### Fake-profound kickers
+
+- The final line that lifts off from the argument into aphorism: "Maybe the real infrastructure was the constraints we accepted along the way." "The tools change. The tradeoffs don't." "In the end, we're all just managing entropy." A metaphor, a chiasmus, or a mic-drop that sounds like wisdom and asserts nothing.
+- **Delete it. Do not rewrite it into a better metaphor, and do not preserve its rhythm with a substitute line.** This is the instruction that matters most here, because the reflex when told "this kicker is weak" is to write a stronger kicker — which reproduces the pattern with better vocabulary. The correct edit is subtraction.
+- After deleting, end on the clearest concrete sentence already in the draft. If the piece genuinely needs closure, add a plain takeaway or a next action, not a sentiment.
+- Distinct from generic future-narrative closers (hedged predictions with no testable content) and generic conclusions (stock filler phrases): the fake-profound kicker is often *original* prose. It's well-written and still has to go. Adapted from `petergyang/no-ai-slop`.
+
+### Summary-recap endings
+
+- A closing paragraph that restates what the reader just read, whether or not it announces itself with "In conclusion" or "To summarize." The unmarked version is the harder one to catch: a final paragraph that introduces no new fact, claim, or turn and simply re-walks the argument in fresh words.
+- Test: delete the last paragraph. If nothing is lost, it was a recap. The reader was just there.
+- Fix: end on the last concrete point, a takeaway the body didn't already state outright, or a next action. Adapted from `petergyang/no-ai-slop`.
 
 ### Chatbot artifacts
 - "I hope this helps!", "Certainly!", "Absolutely!", "Great question!", "Feel free to reach out," "Let me know if you need anything else" — these are conversational tics from chat interfaces, not writing. Remove entirely.
@@ -373,6 +420,20 @@ These slot-fill constructions signal that a sentence was generated, not written.
 ### Infomercial engagement hooks
 - Punchy fragment-hooks that tee up a reveal: "The catch?", "The kicker?", "Here's the thing.", "But here's the kicker:", "The best part?", "Plot twist:", "The result?". AI uses these to fake momentum and manufacture suspense around ordinary information — the prose equivalent of a late-night infomercial.
 - Distinct from rhetorical-question openers (which stall before a point) and chatbot artifacts (which perform helpfulness): these are mid-flow teasers that pad the rhythm. The fix is to delete the hook and state the thing. "The catch? It only works on weekends." becomes "It only works on weekends." Adapted from `Aboudjem/humanizer-skill` P41.
+
+### Colon reveals
+
+- The declarative sibling of the infomercial hook: a bare noun phrase, a colon, then a lowercase dramatic payoff. "The detail that makes it work: a separate agent grades the output." "The best part: it learns from corrections." "The problem with that approach: nobody maintains it."
+- The colon is doing suspense work that punctuation shouldn't do. It converts a normal sentence into a two-beat reveal, and LLMs reach for it constantly because it makes flat information feel like a discovery.
+- Fix: rewrite as one plain sentence. "A separate agent grades the output, which is what makes it work." Reserve colons for lists, labels, quotes, and definitions.
+- **Sentence case after colons.** Related habit: capitalizing the first word after a colon mid-sentence. Use lowercase unless a proper noun, a title, code, or a full quoted sentence follows. Rife in AI-generated headings and bullet leads. Adapted from `petergyang/no-ai-slop`.
+
+### Dramatic fragmentation
+
+- Chopping a single thought into stacked fragments for rhythm: "Faster. Cheaper. And it runs offline." / "That's it. That's the whole feature." / "One config file. One command. Done."
+- This one carries real tension with the fragments-are-good guidance elsewhere in this skill, so read the distinction carefully. A deliberate fragment breaks an established rhythm and earns its emphasis. Dramatic fragmentation *is* the rhythm: three or more consecutive fragments of similar length, each carrying a single word or phrase, none of them varying the shape. The uniformity is the tell, not the fragment.
+- Fix: keep at most one fragment in the run and fold the rest into a complete sentence. "Faster, cheaper, and it runs offline" says the same thing without the drumbeat.
+- The "That's it. That's the [noun]." construction is worth flagging on sight — it's a social-post tic that adds nothing to the claim before it. Adapted from `petergyang/no-ai-slop`.
 
 ### Social endorsement closers
 - The curatorial sign-off LLMs append to LinkedIn and X posts that share or recommend something — usually a colon teeing up a link: "This one is worth your time:", "This one's a must-read:", "I highly recommend giving this a read.", "Do yourself a favor and read this.", "You won't want to miss this one.", "Save this for later.", "Bookmark this.", "Don't sleep on this one.", "Trust me, you'll want to read this.", "Thank me later."
@@ -491,6 +552,10 @@ Not all AI-isms are equal. When doing a quick pass or triaging a large document,
 - Real/actual adjective inflation ("real on-chain tokenomics")
 - Bullet lists of bare noun phrases (5+ short adj+noun items, no verbs)
 - Tier 3 phrase clustering (≥3 distinct boilerplate phrases in one piece)
+- Colon reveals ("The best part: it learns.")
+- Negative listing ("Not a framework. Not a library. A protocol.")
+- Dramatic fragmentation (3+ consecutive same-shape fragments; "That's it. That's the whole thing.")
+- Fake-profound kickers (delete, never rewrite into a better metaphor)
 
 ### P2 — Stylistic polish (fix when time allows)
 - Generic conclusions ("The future looks bright")
@@ -500,6 +565,11 @@ Not all AI-isms are equal. When doing a quick pass or triaging a large document,
 - Transition phrases (Moreover, Furthermore, Additionally)
 - Hashtag stuffing (`blog`/`technical-blog` profiles)
 - Tier 3 phrase repetition (single phrase ≥2× — fine in isolation, suspect in stacks)
+- Summary-recap endings (unmarked final paragraph that restates the piece)
+- Nominalized verbs ("made a decision," "has the ability to")
+- Inanimate subject agency ("the decision emerged")
+- Often-empty adverbs at density (just, literally, simply, actually)
+- Capitalization after mid-sentence colons
 
 Use P0+P1 for quick passes. Full audit covers all three tiers.
 
@@ -551,8 +621,18 @@ Rules not listed in the table apply at full strength across all profiles.
 | Social endorsement closers | strict (the LinkedIn share-post tell) | strict | strict | strict | skip | relaxed (1 OK in a DM) |
 | Hedge-stacked predictions | strict | strict | relaxed ("could" is hedged accuracy) | **extra strict** | relaxed | skip |
 | Real/actual inflation | strict | strict | strict | **extra strict** | relaxed | skip |
+| Colon reveals | strict (its native habitat) | strict | strict | strict | skip (colons are labels) | relaxed |
+| Negative listing | strict | strict | strict | strict | skip | relaxed |
+| Dramatic fragmentation | relaxed (one run OK in short-form) | strict | strict | strict | skip | skip |
+| Fake-profound kickers | strict | strict | strict | **extra strict** | skip | relaxed |
+| Summary-recap endings | strict | strict | relaxed (a real recap can help) | strict | skip (summaries are the job) | skip |
+| Nominalized verbs | strict | strict | strict | strict | strict | skip |
+| Inanimate subject agency | strict | strict | **relaxed** (see below) | strict | relaxed | skip |
+| Often-empty adverbs | relaxed (spoken register) | strict | strict | strict | strict | skip |
 
 **Technical-blog word table exceptions:** These terms have legitimate technical meaning and should not be flagged in technical context: `robust`, `comprehensive`, `seamless`, `ecosystem`, `leverage` (when discussing actual platform leverage/APIs), `facilitate`, `underpin`, `streamline`. Still flag: `delve`, `tapestry`, `beacon`, `embark`, `testament to`, `game-changer`, `harness`.
+
+**Inanimate subjects in technical writing:** systems genuinely act, and naming the component *is* the precise choice. "The scheduler evicts the pod," "the GC pauses the mutator threads," "the parser rejects malformed headers" — all correct, all subjects that aren't people. The rule targets *abstractions* performing human cognition or volition: "the decision emerged," "the architecture believes," "the roadmap wants to." Flag the abstraction, keep the component.
 
 **"Extra strict"** means: flag even borderline instances. In investor emails, a single "thriving ecosystem" can undermine the whole message.
 
@@ -644,6 +724,20 @@ The documented persona leans on a couple of fixed formulas (a six-step "Hook →
 
 ---
 
+## Workflow
+
+1. **Read the whole draft first.** No edits until you've seen the end. The kicker, the recap ending, and the through-line only show up on a full read.
+2. **Note the core point and 3-5 voice signals to preserve** (vocabulary, cadence, bluntness, humor, uncertainty, digressions, level of polish). Keep this note internal — it's your reference for the rest of the pass, not part of the output. If you can't identify the core point, ask instead of guessing.
+3. **Pick the context profile** — stated, or auto-detected from the cues above. Say which one you're using if it wasn't given.
+4. **Detect requests stop here**: return the findings report and offer to rewrite. Don't continue to step 5.
+5. **Make the minimum effective edits**, governed by the editing principles above.
+6. **Check the result against `eval.md`** in this skill directory. Run it yourself, in one pass.
+7. **Fix any failed checks and re-run** the affected section. Then return the output in the format for your mode.
+
+If the writer hasn't supplied a draft, ask for it. If the audience or format is genuinely ambiguous and it changes the edit, ask one question — who it's for and where it's going — rather than guessing across several.
+
+---
+
 ## Output format
 
 ### Rewrite mode (default for existing text)
@@ -660,7 +754,7 @@ The full rewritten content. Preserve the original structure, intent, and all spe
 A brief summary of the major edits made. Not every word, just the meaningful changes.
 
 **4. Second-pass audit**
-Re-read the rewritten version from section 2. Identify any remaining AI tells that survived the first pass — recycled transitions, lingering inflation, copula avoidance, filler phrases, or anything else from the categories above. Fix them, return the corrected text inline, and note what changed in this pass. If the rewrite is clean, say so.
+Re-read the rewritten version from section 2 — the new text, not your notes on it. Run it against `eval.md`. Identify any remaining AI tells that survived the first pass: recycled transitions, lingering inflation, copula avoidance, filler phrases, a kicker you rewrote instead of deleting, or anything else from the categories above. Fix them, return the corrected text inline, and note what changed in this pass. If the rewrite is clean, say so.
 
 ### Generate mode
 
@@ -673,17 +767,19 @@ The finished piece, in the target voice (default `karthik`). This is the part th
 One or two lines: which of the four structures you used, and anything you deliberately kept for voice (a fragment, a repeated word, a dry close) that a naive AI-ism pass might otherwise flag.
 
 **3. Self-audit**
-Confirm you ran the P0+P1 pass on your own draft. Note anything you caught and fixed. If you're handing back more than one option (e.g., three tweet variants), audit each. Keep this short — the draft is the product.
+Confirm you ran the P0+P1 pass and the `eval.md` checks on your own draft. Note anything you caught and fixed. If you're handing back more than one option (e.g., three tweet variants), audit each. Keep this short — the draft is the product.
 
 ### Detect mode
 
 Return your response in two sections:
 
 **1. Issues found**
-A bulleted list of every AI-ism identified, with the offending text quoted. Group by severity (P0, P1, P2).
+A bulleted list of every AI-ism identified, grouped by severity (P0, P1, P2). Each entry gets three things and nothing more: the **pattern name** from this file, the **quoted line**, and the **fix in a few words**. Example: *Colon reveal — "The detail that makes it work: a separate agent grades it." → fold into one plain sentence.*
 
 **2. Assessment**
 For each flag, note whether it's a clear problem or a judgment call. Some AI-associated patterns are effective writing techniques — uniform paragraph length is a problem, but a well-placed "however" isn't. Call out which flags the writer should definitely fix vs. which ones are worth a second look but might be fine in context. If the text is clean, say so.
+
+No score, no authorship verdict, no rewritten draft. Close by offering to run the rewrite if they want it.
 
 ### Edit mode
 
@@ -711,3 +807,16 @@ Five principles for human-sounding rewrites:
 If the original writing is already strong, say so and make only the necessary cuts. Don't over-edit for the sake of it.
 
 The replacement table provides defaults, not mandates. If a flagged word is clearly the right choice in context, preserve it.
+
+---
+
+## Sources
+
+Patterns and structure adapted from these open-source skills, each credited inline where used:
+
+- [`petergyang/no-ai-slop`](https://github.com/petergyang/no-ai-slop) — editing principles, colon reveals, negative listing, dramatic fragmentation, fake-profound kickers, summary-recap endings, the detect-mode no-scoring rule, and the `eval.md` self-check pattern
+- [`brandonwise/humanizer`](https://github.com/brandonwise/humanizer) — the three-tier vocabulary model
+- [`Aboudjem/humanizer-skill`](https://github.com/Aboudjem/humanizer-skill) — P34, P35, P38, P40, P41, P43
+- [`blader/humanizer`](https://github.com/blader/humanizer) — P21, P26, P27
+
+Research cited in "What this skill is and isn't": Liang et al. (Stanford, *Patterns* 2023); Jabarian & Imas (BFI WP 2025-116); arXiv:2506.07001 (2025).
