@@ -1,7 +1,7 @@
 ---
 name: write-like-me
-description: Audit, rewrite, or generate content to strip AI writing patterns ("AI-isms") and match the author's voice. Use this skill when asked to "remove AI-isms," "clean up AI writing," "edit writing for AI patterns," "audit writing for AI tells," "make this sound less like AI," OR when asked to "write this like me," "draft a post in my voice," "make this sound like Karthik," or to write/rewrite a tweet, thread, LinkedIn post, or long-form piece in the author's own voice. Supports detect-only, edit-in-place, rewrite, and generate-from-scratch modes; an optional voice profile (karthik / casual / professional / technical / warm / blunt); and an iterate-to-convergence pass.
-version: 4.1.0
+description: Audit, rewrite, or generate content to strip AI writing patterns ("AI-isms") and invisible AI watermarks, and match the author's voice. Use this skill when asked to "remove AI-isms," "clean up AI writing," "edit writing for AI patterns," "audit writing for AI tells," "make this sound less like AI," OR to "remove watermarks," "strip invisible characters," "check for hidden Unicode," "remove zero-width characters," "clean AI metadata from this draft," OR when asked to "write this like me," "draft a post in my voice," "make this sound like Karthik," or to write/rewrite a tweet, thread, LinkedIn post, or long-form piece in the author's own voice. Supports detect-only, edit-in-place, rewrite, generate-from-scratch, and marks-only modes; a bundled scanner for invisible Unicode, chat-UI fingerprints, and frontmatter provenance keys; an optional voice profile (karthik / casual / professional / technical / warm / blunt); and an iterate-to-convergence pass.
+version: 4.2.0
 license: MIT
 metadata:
   author: Karthikeyan NG
@@ -21,6 +21,8 @@ The patterns are useful as a signal — both for cleaning up your own writing an
 
 In short: signals, not proof. Worth acting on; not worth ruining someone's day over.
 
+The same honesty runs the other direction. This skill strips invisible Unicode marks, chat-UI fingerprints, and provenance keys (see Invisible provenance marks), and rewriting prose does weaken statistical token-sampling watermarks as a side effect. None of that makes a draft "human-written," and you should never tell the writer it does. Model vendors embed marks at the token level that no Unicode scrub touches, detection keys aren't public, and a clean scan only means no *visible or invisible carriers were found in the characters*. Use these tools for what they're good for: cleaning your own drafts, fixing paste residue that breaks diffs and search, and stripping tool telemetry you didn't ask for. Not for defeating a disclosure requirement you're actually under — if a venue, client, or institution requires you to disclose AI assistance, strip the marks and disclose anyway.
+
 ## Modes
 
 This skill operates in one of four modes:
@@ -39,7 +41,9 @@ This skill operates in one of four modes:
 
 Trigger generate mode when the user says "write," "draft," "compose," "turn these notes into," or otherwise asks for new content rather than a fix. Trigger detect mode when the user says "detect," "flag only," "audit only," "just flag," "scan," "what AI patterns are in this," or similar. Trigger edit mode when the user names a file and asks you to fix or clean it in place. Default to rewrite mode for existing text when not specified.
 
-**Invocation.** Natural language is enough ("write a tweet about RAG latency like me," "rewrite this in a blunt voice for LinkedIn," "edit `post.md` in place," "scan this, don't rewrite"). Power users can also pass explicit options, which map to the sections below: `[--mode rewrite|generate|detect|edit]`, `[--voice karthik|casual|professional|technical|warm|blunt]`, `[--context linkedin|blog|technical-blog|investor-email|docs|casual]`, `[--file PATH]`, `[--iterate N]` (max 2).
+**Marks-only runs.** "Strip the invisible characters from `draft.md`," "remove the watermarks but don't touch my writing," "check this for hidden Unicode" — these ask for the mechanical pass alone. Run `scripts/scan_marks.py` (see Invisible provenance marks), report what it found, and leave the prose completely alone. Don't fold an AI-ism rewrite into a request to strip marks; they're separate jobs and the writer asked for one of them.
+
+**Invocation.** Natural language is enough ("write a tweet about RAG latency like me," "rewrite this in a blunt voice for LinkedIn," "edit `post.md` in place," "scan this, don't rewrite"). Power users can also pass explicit options, which map to the sections below: `[--mode rewrite|generate|detect|edit]`, `[--voice karthik|casual|professional|technical|warm|blunt]`, `[--context linkedin|blog|technical-blog|investor-email|docs|casual]`, `[--file PATH]`, `[--marks-only]`, `[--iterate N]` (max 2).
 
 **Iterate to convergence (optional).** Rewrite and generate modes already run one corrective second pass (see Output format) — that built-in pass *is* pass 2, so `--iterate` does not stack on top of it. When the writer asks to "iterate," "keep going until it's clean," or passes `--iterate N`, repeat the audit→rewrite cycle until no patterns remain or **N passes** are reached. Cap **N at 2**: a rewrite plus one corrective pass clears the flagged patterns, and a third pass costs a full regeneration while rarely finding more. Report how many passes it took ("converged in 2 passes").
 
@@ -59,9 +63,10 @@ In **generate** mode, your job is to:
 
 In **detect** mode, your job is to:
 
-1. **Audit it**: identify every AI-ism present, naming the pattern and quoting the specific line
-2. **Assess it**: note which flags are clear problems vs. patterns that may be intentional or effective in context
-3. **Offer**: end by offering to run the rewrite, so the writer chooses
+1. **Scan it**: if you have a file, run `scripts/scan_marks.py` and report anything it finds under P0
+2. **Audit it**: identify every AI-ism present, naming the pattern and quoting the specific line
+3. **Assess it**: note which flags are clear problems vs. patterns that may be intentional or effective in context
+4. **Offer**: end by offering to run the rewrite, so the writer chooses
 
 Three things detect mode must not do. **Don't score the draft** — no percentages, no "72% AI," no A-through-F grade. A number implies a measurement that doesn't exist here. **Don't render a verdict on authorship** — you are not a detector, and the false-positive research in the section above is the reason. **Don't rewrite** — flag and stop, even when the fix is obvious and you're confident it's an improvement.
 
@@ -69,9 +74,10 @@ What detect mode produces instead is better than a score: a named pattern with a
 
 In **edit** mode, your job is to:
 
-1. **Read** the file the writer named
-2. **Edit in place**: apply minimal, targeted fixes to the flagged spans with the Edit tool, leaving already-human passages untouched
-3. **Verify**: re-read the file and confirm the flagged patterns are resolved; report what you changed
+1. **Scan** with `python3 scripts/scan_marks.py <path>`, then **read** the file the writer named
+2. **Strip invisible marks mechanically** if the scan found any: `python3 scripts/scan_marks.py <path> --fix --in-place`. Do this before your own edits, and never by hand — retyping a span silently drops or duplicates the invisible characters inside it
+3. **Edit in place**: apply minimal, targeted fixes to the flagged spans with the Edit tool, leaving already-human passages untouched
+4. **Verify**: re-read the file and confirm the flagged patterns are resolved; report what you changed
 
 ---
 
@@ -411,6 +417,35 @@ These slot-fill constructions signal that a sentence was generated, not written.
 - Tracking parameters that AI tools auto-append to URLs they generate, surviving copy-paste into published content: `utm_source=chatgpt.com`, `utm_source=copilot.com`, `utm_source=openai`, `utm_source=claude.ai`, `utm_source=perplexity.ai`, `referrer=grok.com`. Same logic as citation markup leaks — the presence of the parameter is the signature, regardless of what the surrounding text reads like.
 - The fix: strip the parameter from every URL. Keep the URL itself if the link is meaningful; lose the parameter entirely. Adapted from `Aboudjem/humanizer-skill` P35.
 
+### Invisible provenance marks
+
+The two rules above catch fingerprints you can *see*. This one catches the ones you can't, and it is the only rule in this file you should not try to apply by reading.
+
+Text carries AI provenance in three places that leave no visible trace:
+
+- **Invisible Unicode.** Zero-width characters (ZWSP, ZWNJ, ZWJ, word joiner, BOM), bidi controls (RLO, LRE, FSI), tag characters (U+E0001–U+E007F, which can encode arbitrary hidden text), variation selectors, and space homoglyphs (NBSP, em space, narrow no-break space). Some of this is deliberate watermarking; most of it is paste residue from a chat UI or a word processor. Either way it survives copy-paste, breaks search and diff, and is invisible in every editor the writer uses.
+- **Chat-UI citation tokens** wrapped in private-use delimiters (U+E200–U+E206), which is how the visible `citeturn0search0` leaks actually arrive.
+- **YAML frontmatter provenance keys** in Markdown — `ai_generated: true`, `generator: ChatGPT`, `model: gpt-4o`.
+
+**You cannot eyeball these.** A zero-width character has no glyph, and by the time text reaches you it may have been normalized. Do not claim a draft is clean of invisible marks unless you ran the scanner. Do not hand-edit them out either — reproducing a span by hand silently drops or duplicates the invisible characters around it.
+
+**Run the script:**
+
+```bash
+python3 scripts/scan_marks.py draft.md            # report: what's there, at line:col
+python3 scripts/scan_marks.py draft.md --json     # machine-readable
+python3 scripts/scan_marks.py draft.md --fix --in-place   # strip them (.bak kept)
+cat draft.md | python3 scripts/scan_marks.py -    # pasted text via stdin
+```
+
+`scripts/` sits next to this file, so resolve it against this file's own directory — not the writer's working directory, which is where the skill runs from. The path differs between a plugin install and `~/.claude/skills/`; find it once and reuse it. Exit code is 0 when clean, 1 when marks were found, so it drops straight into a pre-commit hook or CI step.
+
+**Quoted examples are exempt, mechanically.** Fingerprint matches inside fenced code blocks and inline code spans are skipped, because a post explaining `citeturn0search0` hasn't leaked one. This is the Self-reference escape hatch below, enforced in code. Pass `--include-code` when you want them flagged anyway. The exemption covers the regex fingerprints only — an invisible character inside a code block is still a defect, so those are always reported.
+
+**What it deliberately does not strip.** Zero-width joiners are load-bearing in emoji sequences (👨‍👩‍👧) and in Tamil, Devanagari, Arabic, and other complex scripts; variation selector 16 is what makes ⚠️ render as an emoji. The scanner reports these as `keep` and leaves them alone. Never pass `--strip-all` on text containing emoji or Indic script — it will mangle it. Unfilled placeholders (`[Your Name]`, `2026-XX-XX`) are reported but not deleted, because deleting them silently drops content the writer meant to fill in; surface those to the writer instead.
+
+**Two things this does not do.** It doesn't touch statistical (token-sampling) watermarks — those live in word choice, not in characters, and no amount of Unicode scrubbing removes them. And it doesn't touch file-level provenance: C2PA Content Credentials, EXIF, XMP, and PDF/DOCX/image metadata are a different problem with different tools. See [`guillaumemeyer/watermarks-remover`](https://github.com/guillaumemeyer/watermarks-remover) for that side.
+
 ### Novelty inflation
 - AI text treats established concepts as if the speaker invented or discovered them: "He introduced a term," "She coined the phrase," "a concept nobody's naming," "a failure mode nobody talks about." In reality, most ideas in a conversation are applications of existing concepts, not inventions.
 - Two problems. First, it's factually risky: if the concept already has a Wikipedia page or conference talks from last year, claiming novelty makes the writer look uninformed. Second, it flatters the subject in a way that reads as promotional rather than analytical.
@@ -536,6 +571,7 @@ Not all AI-isms are equal. When doing a quick pass or triaging a large document,
 - Vague attributions without sources ("Experts believe")
 - Significance inflation on routine events
 - Chatbot citation markup leaks and AI-tool URL parameters (fingerprints — strip on sight)
+- Invisible provenance marks: zero-width and bidi characters, tag characters, space homoglyphs, frontmatter provenance keys (run `scripts/scan_marks.py`; never claim clean without it)
 - Hashtag stuffing on `linkedin` and `investor-email` posts (severity varies by profile — same rule, lower priority on `blog`/`technical-blog` where a launch post may legitimately stack tags; see the context-profile table below)
 
 ### P1 — Obvious AI smell (fix before publishing)
@@ -578,6 +614,8 @@ Use P0+P1 for quick passes. Full audit covers all three tiers.
 ## Self-reference escape hatch
 
 When writing *about* AI writing patterns (blog posts, tutorials, skill documentation like this file), quoted examples are exempt from flagging. Text inside quotation marks, code blocks, or explicitly marked as illustrative ("for example, AI might write...") should not be rewritten. Only flag patterns that appear in the author's own prose, not in cited examples of bad writing.
+
+`scan_marks.py` implements the code-block half of this rule directly: it skips fingerprint matches inside fenced blocks and inline code. It can't read quotation marks in prose, though, so apply the rest of the hatch yourself when reviewing its output.
 
 ---
 
@@ -629,10 +667,13 @@ Rules not listed in the table apply at full strength across all profiles.
 | Nominalized verbs | strict | strict | strict | strict | strict | skip |
 | Inanimate subject agency | strict | strict | **relaxed** (see below) | strict | relaxed | skip |
 | Often-empty adverbs | relaxed (spoken register) | strict | strict | strict | strict | skip |
+| Invisible provenance marks | strict | strict | strict | strict | strict | strict |
 
 **Technical-blog word table exceptions:** These terms have legitimate technical meaning and should not be flagged in technical context: `robust`, `comprehensive`, `seamless`, `ecosystem`, `leverage` (when discussing actual platform leverage/APIs), `facilitate`, `underpin`, `streamline`. Still flag: `delve`, `tapestry`, `beacon`, `embark`, `testament to`, `game-changer`, `harness`.
 
 **Inanimate subjects in technical writing:** systems genuinely act, and naming the component *is* the precise choice. "The scheduler evicts the pod," "the GC pauses the mutator threads," "the parser rejects malformed headers" — all correct, all subjects that aren't people. The rule targets *abstractions* performing human cognition or volition: "the decision emerged," "the architecture believes," "the roadmap wants to." Flag the abstraction, keep the component.
+
+**Invisible marks never relax.** The row above is strict across every profile, including `casual` and `docs`, because a zero-width character or a `generator: ChatGPT` frontmatter key is a fingerprint, not a style choice. Nothing about the audience makes it acceptable, and the fix is mechanical either way. This is the only rule in the matrix with no relaxed or skip cell.
 
 **"Extra strict"** means: flag even borderline instances. In investor emails, a single "thriving ecosystem" can undermine the whole message.
 
@@ -726,6 +767,7 @@ The documented persona leans on a couple of fixed formulas (a six-step "Hook →
 
 ## Workflow
 
+0. **Scan for invisible marks first, when you have a file.** Run `python3 scripts/scan_marks.py <path>` before reading. It costs one command, and its findings are the only ones you cannot recover by reading more carefully. Skip it only when the writer pasted text inline and you have no file — then pipe the paste through `scan_marks.py -` if it matters, or say you didn't check.
 1. **Read the whole draft first.** No edits until you've seen the end. The kicker, the recap ending, and the through-line only show up on a full read.
 2. **Note the core point and 3-5 voice signals to preserve** (vocabulary, cadence, bluntness, humor, uncertainty, digressions, level of polish). Keep this note internal — it's your reference for the rest of the pass, not part of the output. If you can't identify the core point, ask instead of guessing.
 3. **Pick the context profile** — stated, or auto-detected from the cues above. Say which one you're using if it wasn't given.
@@ -776,6 +818,8 @@ Return your response in two sections:
 **1. Issues found**
 A bulleted list of every AI-ism identified, grouped by severity (P0, P1, P2). Each entry gets three things and nothing more: the **pattern name** from this file, the **quoted line**, and the **fix in a few words**. Example: *Colon reveal — "The detail that makes it work: a separate agent grades it." → fold into one plain sentence.*
 
+Invisible marks are the one exception to "quote the line," since they have no glyph to quote. Report them as codepoint, count, and location, straight from the scanner: *Invisible provenance mark — U+200B ZERO WIDTH SPACE ×4 at 11:4, 11:22, 14:9, 19:31 → strip with `scan_marks.py --fix`.* Report the `keep` hits too, labelled as intentional, so the writer knows they were seen and left. If you didn't run the scanner, say so rather than implying the draft is clean.
+
 **2. Assessment**
 For each flag, note whether it's a clear problem or a judgment call. Some AI-associated patterns are effective writing techniques — uniform paragraph length is a problem, but a well-placed "however" isn't. Call out which flags the writer should definitely fix vs. which ones are worth a second look but might be fine in context. If the text is clean, say so.
 
@@ -818,5 +862,6 @@ Patterns and structure adapted from these open-source skills, each credited inli
 - [`brandonwise/humanizer`](https://github.com/brandonwise/humanizer) — the three-tier vocabulary model
 - [`Aboudjem/humanizer-skill`](https://github.com/Aboudjem/humanizer-skill) — P34, P35, P38, P40, P41, P43
 - [`blader/humanizer`](https://github.com/blader/humanizer) — P21, P26, P27
+- [`guillaumemeyer/watermarks-remover`](https://github.com/guillaumemeyer/watermarks-remover) — the Unicode codepoint tables behind `scripts/scan_marks.py` (its Layer A), and the honesty framing separating verifiable removals from best-effort ones. Its file-provenance half (C2PA, EXIF, XMP, PDF/DOCX/image metadata) is out of scope here
 
 Research cited in "What this skill is and isn't": Liang et al. (Stanford, *Patterns* 2023); Jabarian & Imas (BFI WP 2025-116); arXiv:2506.07001 (2025).

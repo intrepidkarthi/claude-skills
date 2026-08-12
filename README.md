@@ -2,7 +2,18 @@
 
 Personal [Claude Code](https://code.claude.com/docs/en/skills) skills, distributed as a plugin marketplace.
 
-First skill: **write-like-me** — strip AI writing patterns ("AI-isms") and write/rewrite/generate in Karthik's voice. Modes: `detect`, `rewrite`, `edit` (in place), `generate`.
+First skill: **write-like-me** — strip AI writing patterns ("AI-isms") and write/rewrite/generate in Karthik's voice. Modes: `detect`, `rewrite`, `edit` (in place), `generate`, plus a marks-only pass.
+
+It also ships a scanner for the AI marks you can't see by reading: invisible Unicode (zero-width characters, bidi controls, tag characters, space homoglyphs), chat-UI citation fingerprints, AI-tool `utm_source` parameters, and provenance keys in YAML frontmatter.
+
+```bash
+python3 plugins/write-like-me/skills/write-like-me/scripts/scan_marks.py draft.md
+python3 plugins/write-like-me/skills/write-like-me/scripts/scan_marks.py draft.md --fix --in-place
+```
+
+Stdlib only, no dependencies. It preserves joiners that are load-bearing in emoji sequences and in Tamil, Devanagari, and Arabic rather than stripping every invisible character blind. Codepoint tables adapted from [`guillaumemeyer/watermarks-remover`](https://github.com/guillaumemeyer/watermarks-remover) (MIT); that project's file-provenance half (C2PA, EXIF, PDF/DOCX/image metadata) is out of scope here.
+
+A clean scan means no invisible carriers were found in the characters. It does not mean the text is human-written — statistical token-sampling watermarks live in word choice and survive any Unicode scrub.
 
 ## Layout
 
@@ -17,7 +28,9 @@ claude-skills/
 │       └── skills/
 │           └── write-like-me/
 │               ├── SKILL.md            # the skill itself
-│               └── eval.md             # self-check run before returning a draft
+│               ├── eval.md             # self-check run before returning a draft
+│               └── scripts/
+│                   └── scan_marks.py   # invisible-mark scanner / stripper
 ├── install-local.sh                    # local installer (user + per-project scope)
 └── README.md
 ```

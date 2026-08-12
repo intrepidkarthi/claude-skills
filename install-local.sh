@@ -39,11 +39,16 @@ if [[ ! -f "$SRC_DIR/SKILL.md" ]]; then
 fi
 
 install_to() { # $1 = a .../.claude/skills directory
-  mkdir -p "$1/$SKILL_NAME"
-  # copy every file in the skill dir, not just SKILL.md — bundled resources
-  # (eval.md, references) are part of the skill and must travel with it.
-  cp "$SRC_DIR"/*.md "$1/$SKILL_NAME/"
-  echo "  installed: $1/$SKILL_NAME/ ($(ls "$SRC_DIR"/*.md | wc -l | tr -d ' ') files)"
+  local dest="$1/$SKILL_NAME"
+  # Replace rather than merge, so files deleted upstream don't linger.
+  rm -rf "$dest"
+  mkdir -p "$dest"
+  # Copy the whole skill directory, not just SKILL.md — eval.md, scripts/, and
+  # any references are part of the skill and must travel with it.
+  cp -R "$SRC_DIR"/. "$dest/"
+  rm -rf "$dest"/**/__pycache__ "$dest"/__pycache__
+  [[ -d "$dest/scripts" ]] && chmod +x "$dest"/scripts/*.py 2>/dev/null || true
+  echo "  installed: $dest/ ($(find "$dest" -type f | wc -l | tr -d ' ') files)"
 }
 
 echo "User scope (all projects on this machine):"
